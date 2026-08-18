@@ -20,11 +20,15 @@ func NormalizeTarget(address, port string) (domain.Target, *domain.AppError) {
 	if err != nil {
 		return domain.Target{}, validationError(err)
 	}
-	normalizedPort, err := normalizePort(port)
+	normalizedPort, portSpecified, err := normalizePort(port)
 	if err != nil {
 		return domain.Target{}, validationError(err)
 	}
-	return domain.Target{Host: host, Port: normalizedPort}, nil
+	return domain.Target{
+		Host:   host,
+		Port:   normalizedPort,
+		UseSRV: !portSpecified && srvEligibleHost(host),
+	}, nil
 }
 
 func normalizeHost(address string) (string, error) {
@@ -59,21 +63,25 @@ func normalizeHost(address string) (string, error) {
 	return host, nil
 }
 
-func normalizePort(port string) (uint16, error) {
+func normalizePort(port string) (uint16, bool, error) {
 	value := strings.TrimSpace(port)
 	if value == "" {
-		return domain.DefaultPort, nil
+		return domain.DefaultPort, false, nil
 	}
 	for _, r := range value {
 		if r < '0' || r > '9' {
-			return 0, ErrInvalidPort
+			return 0, false, ErrInvalidPort
 		}
 	}
 	parsed, err := strconv.ParseUint(value, 10, 16)
 	if err != nil || parsed == 0 {
-		return 0, ErrInvalidPort
+		return 0, false, ErrInvalidPort
 	}
-	return uint16(parsed), nil
+	return uint16(parsed), true, nil
+}
+
+func srvEligibleHost(host string) bool {
+	return net.ParseIP(host) == nil && strings.Contains(strings.TrimSuffix(host, "."), ".")
 }
 
 func validHostname(host string) bool {

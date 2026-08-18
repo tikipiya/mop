@@ -34,7 +34,7 @@ func TestMainWindowInitialStateAndSuccessfulCheck(t *testing.T) {
 	outcomeApplied := make(chan struct{}, 1)
 	window.afterOutcome = func() { outcomeApplied <- struct{}{} }
 
-	if window.addressEntry.Text != "" || window.portEntry.Text != "25565" || !window.checkButton.Disabled() || window.statusLabel.Text != "○ 未確認" {
+	if window.addressEntry.Text != "" || window.portEntry.Text != "" || !window.checkButton.Disabled() || window.statusLabel.Text != "○ 未確認" {
 		t.Fatalf("unexpected initial state: address=%q port=%q disabled=%v status=%q", window.addressEntry.Text, window.portEntry.Text, window.checkButton.Disabled(), window.statusLabel.Text)
 	}
 	dispatcher.Do(func() { window.addressEntry.SetText("localhost") })

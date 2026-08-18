@@ -3,6 +3,7 @@ package java
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"testing"
@@ -10,6 +11,85 @@ import (
 
 	"mc-server-checker/internal/domain"
 )
+
+func TestClientResolvesMinecraftSRVWhenPortIsOmitted(t *testing.T) {
+	t.Parallel()
+	resolver := &fakeSRVResolver{
+		records: []*net.SRV{{Target: "backend.example.net.", Port: 25570, Priority: 0, Weight: 10}},
+	}
+	client := NewClient(769)
+	client.Resolver = resolver
+
+	address, port, err := client.resolveEndpoint(context.Background(), domain.Target{
+		Host: "play.example.com", Port: domain.DefaultPort, UseSRV: true,
+	})
+	if err != nil {
+		t.Fatalf("resolveEndpoint: %v", err)
+	}
+	if address != "backend.example.net:25570" || port != 25570 {
+		t.Fatalf("endpoint = %q, %d", address, port)
+	}
+	if resolver.service != "minecraft" || resolver.proto != "tcp" || resolver.name != "play.example.com" {
+		t.Fatalf("lookup = %q, %q, %q", resolver.service, resolver.proto, resolver.name)
+	}
+}
+
+func TestClientCheckConnectsThroughSRVEndpoint(t *testing.T) {
+	t.Parallel()
+	address, stop := startFakeServerWithExpectedHost(t, true, "play.example.com")
+	defer stop()
+	_, port := splitTarget(t, address)
+
+	client := NewClient(769)
+	client.Resolver = &fakeSRVResolver{
+		records: []*net.SRV{{Target: "127.0.0.1.", Port: port}},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	result, err := client.Check(ctx, domain.Target{
+		Host: "play.example.com", Port: domain.DefaultPort, UseSRV: true,
+	})
+	if err != nil {
+		t.Fatalf("Check: %v", err)
+	}
+	if result.Status != domain.StatusOnline {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
+func TestClientFallsBackToDefaultPortWithoutSRV(t *testing.T) {
+	t.Parallel()
+	resolver := &fakeSRVResolver{err: errors.New("record not found")}
+	client := NewClient(769)
+	client.Resolver = resolver
+
+	address, port, err := client.resolveEndpoint(context.Background(), domain.Target{
+		Host: "play.example.com", Port: domain.DefaultPort, UseSRV: true,
+	})
+	if err != nil {
+		t.Fatalf("resolveEndpoint: %v", err)
+	}
+	if address != "play.example.com:25565" || port != domain.DefaultPort {
+		t.Fatalf("endpoint = %q, %d", address, port)
+	}
+}
+
+func TestClientSkipsSRVForExplicitPort(t *testing.T) {
+	t.Parallel()
+	resolver := &fakeSRVResolver{records: []*net.SRV{{Target: "unexpected.example.net.", Port: 25570}}}
+	client := NewClient(769)
+	client.Resolver = resolver
+
+	address, port, err := client.resolveEndpoint(context.Background(), domain.Target{
+		Host: "play.example.com", Port: 25566,
+	})
+	if err != nil {
+		t.Fatalf("resolveEndpoint: %v", err)
+	}
+	if address != "play.example.com:25566" || port != 25566 || resolver.calls != 0 {
+		t.Fatalf("endpoint = %q, %d; lookup calls = %d", address, port, resolver.calls)
+	}
+}
 
 func TestClientCheckAgainstFakeServer(t *testing.T) {
 	t.Parallel()
@@ -107,11 +187,16 @@ func TestClientCancellationClosesActiveConnection(t *testing.T) {
 }
 
 func startFakeServer(t *testing.T, sendPong bool) (string, func()) {
+	return startFakeServerWithExpectedHost(t, sendPong, "127.0.0.1")
+}
+
+func startFakeServerWithExpectedHost(t *testing.T, sendPong bool, expectedHost string) (string, func()) {
 	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Listen: %v", err)
 	}
+	_, expectedPort := splitTarget(t, listener.Addr().String())
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -126,7 +211,7 @@ func startFakeServer(t *testing.T, sendPong bool) (string, func()) {
 			t.Errorf("read handshake: %v", err)
 			return
 		}
-		if err := validateHandshake(codec, handshake); err != nil {
+		if err := validateHandshake(codec, handshake, expectedHost, expectedPort); err != nil {
 			t.Errorf("validate handshake: %v", err)
 			return
 		}
@@ -165,7 +250,7 @@ func startFakeServer(t *testing.T, sendPong bool) (string, func()) {
 	}
 }
 
-func validateHandshake(codec Codec, payload []byte) error {
+func validateHandshake(codec Codec, payload []byte, expectedHost string, expectedPort uint16) error {
 	r := bytes.NewReader(payload)
 	protocol, err := DecodeVarInt(r)
 	if err != nil {
@@ -183,7 +268,7 @@ func validateHandshake(codec Codec, payload []byte) error {
 	if err != nil {
 		return err
 	}
-	if protocol != 769 || host != "127.0.0.1" || port == 0 || nextState != 1 || r.Len() != 0 {
+	if protocol != 769 || host != expectedHost || port != expectedPort || nextState != 1 || r.Len() != 0 {
 		return fmt.Errorf("unexpected handshake: protocol=%d host=%q port=%d next=%d trailing=%d", protocol, host, port, nextState, r.Len())
 	}
 	return nil
@@ -200,4 +285,21 @@ func splitTarget(t *testing.T, address string) (string, uint16) {
 		t.Fatalf("parse port: %v", err)
 	}
 	return host, port
+}
+
+type fakeSRVResolver struct {
+	records []*net.SRV
+	err     error
+	calls   int
+	service string
+	proto   string
+	name    string
+}
+
+func (r *fakeSRVResolver) LookupSRV(_ context.Context, service, proto, name string) (string, []*net.SRV, error) {
+	r.calls++
+	r.service = service
+	r.proto = proto
+	r.name = name
+	return "", r.records, r.err
 }

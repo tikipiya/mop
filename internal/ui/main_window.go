@@ -83,7 +83,7 @@ func (m *MainWindow) buildContent(build platform.BuildInfo) {
 	m.addressEntry.SetPlaceHolder("play.example.com")
 	m.addressEntry.SetText(address)
 	m.portEntry = widget.NewEntry()
-	m.portEntry.SetPlaceHolder("25565")
+	m.portEntry.SetPlaceHolder("省略時は自動検出 / 25565")
 	m.portEntry.SetText(port)
 
 	m.checkButton = widget.NewButton("確認", m.startCheck)

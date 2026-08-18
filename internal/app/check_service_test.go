@@ -13,7 +13,7 @@ import (
 func TestCheckServiceSuccess(t *testing.T) {
 	t.Parallel()
 	checker := checkerFunc(func(ctx context.Context, target domain.Target) (domain.Result, error) {
-		if target != (domain.Target{Host: "play.example.com", Port: 25565}) {
+		if target != (domain.Target{Host: "play.example.com", Port: 25565, UseSRV: true}) {
 			t.Fatalf("target = %+v", target)
 		}
 		if _, ok := ctx.Deadline(); !ok {

@@ -15,8 +15,10 @@ func TestNormalizeTarget(t *testing.T) {
 		port    string
 		want    domain.Target
 	}{
-		{"hostname and default port", "  play.example.com  ", "", domain.Target{Host: "play.example.com", Port: 25565}},
+		{"hostname and SRV lookup", "  play.example.com  ", "", domain.Target{Host: "play.example.com", Port: 25565, UseSRV: true}},
 		{"hostname and explicit port", "localhost", " 25566 ", domain.Target{Host: "localhost", Port: 25566}},
+		{"hostname and explicit default port", "play.example.com", "25565", domain.Target{Host: "play.example.com", Port: 25565}},
+		{"local hostname without SRV lookup", "localhost", "", domain.Target{Host: "localhost", Port: 25565}},
 		{"ipv4", "127.0.0.1", "1", domain.Target{Host: "127.0.0.1", Port: 1}},
 		{"bracketed ipv6", "[2001:0db8::1]", "65535", domain.Target{Host: "2001:db8::1", Port: 65535}},
 	}

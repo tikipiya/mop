@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
+	"strings"
 	"time"
 
 	"mc-server-checker/internal/domain"
@@ -22,7 +24,12 @@ type Client struct {
 	ProtocolVersion int32
 	Codec           Codec
 	Dialer          *net.Dialer
+	Resolver        SRVResolver
 	Now             func() time.Time
+}
+
+type SRVResolver interface {
+	LookupSRV(ctx context.Context, service, proto, name string) (string, []*net.SRV, error)
 }
 
 func NewClient(protocolVersion int32) *Client {
@@ -30,6 +37,7 @@ func NewClient(protocolVersion int32) *Client {
 		ProtocolVersion: protocolVersion,
 		Codec:           NewCodec(),
 		Dialer:          &net.Dialer{Timeout: 3 * time.Second},
+		Resolver:        net.DefaultResolver,
 		Now:             time.Now,
 	}
 }
@@ -39,7 +47,11 @@ func (c *Client) Check(ctx context.Context, target domain.Target) (domain.Result
 	if dialer == nil {
 		dialer = &net.Dialer{Timeout: 3 * time.Second}
 	}
-	conn, err := dialer.DialContext(ctx, "tcp", target.Address())
+	dialAddress, handshakePort, err := c.resolveEndpoint(ctx, target)
+	if err != nil {
+		return domain.Result{}, err
+	}
+	conn, err := dialer.DialContext(ctx, "tcp", dialAddress)
 	if err != nil {
 		return domain.Result{}, err
 	}
@@ -53,7 +65,9 @@ func (c *Client) Check(ctx context.Context, target domain.Target) (domain.Result
 	}
 
 	codec := c.Codec
-	if err := c.writeHandshake(codec, conn, target); err != nil {
+	handshakeTarget := target
+	handshakeTarget.Port = handshakePort
+	if err := c.writeHandshake(codec, conn, handshakeTarget); err != nil {
 		return domain.Result{}, fmt.Errorf("write handshake: %w", err)
 	}
 	if err := codec.WritePacket(conn, 0x00, nil); err != nil {
@@ -102,6 +116,30 @@ func (c *Client) Check(ctx context.Context, target domain.Target) (domain.Result
 	}
 	result.Latency = &latency
 	return result, nil
+}
+
+func (c *Client) resolveEndpoint(ctx context.Context, target domain.Target) (string, uint16, error) {
+	if !target.UseSRV {
+		return target.Address(), target.Port, nil
+	}
+
+	resolver := c.Resolver
+	if resolver == nil {
+		resolver = net.DefaultResolver
+	}
+	_, records, _ := resolver.LookupSRV(ctx, "minecraft", "tcp", strings.TrimSuffix(target.Host, "."))
+	if len(records) > 0 {
+		record := records[0]
+		host := strings.TrimSuffix(record.Target, ".")
+		if host != "" && record.Port != 0 {
+			address := net.JoinHostPort(host, strconv.FormatUint(uint64(record.Port), 10))
+			return address, record.Port, nil
+		}
+	}
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return "", 0, ctxErr
+	}
+	return target.Address(), target.Port, nil
 }
 
 func (c *Client) writeHandshake(codec Codec, conn net.Conn, target domain.Target) error {

@@ -7,11 +7,13 @@ import (
 
 const DefaultPort uint16 = 25565
 
-// Target is the normalized destination used for both the handshake and TCP
-// connection. Input validation and normalization belong to the app layer.
+// Target is the normalized destination used for the Minecraft handshake.
+// UseSRV records that the user omitted a port and permits DNS discovery for
+// public hostnames before the TCP connection is opened.
 type Target struct {
-	Host string
-	Port uint16
+	Host   string
+	Port   uint16
+	UseSRV bool
 }
 
 func (t Target) Address() string {

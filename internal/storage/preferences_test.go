@@ -11,7 +11,7 @@ func TestPreferencesLoadDefaultsAndSave(t *testing.T) {
 	values := memoryPreferences{}
 	preferences := NewPreferences(values)
 	address, port := preferences.Load()
-	if address != "" || port != "25565" {
+	if address != "" || port != "" {
 		t.Fatalf("defaults = %q, %q", address, port)
 	}
 
@@ -20,13 +20,19 @@ func TestPreferencesLoadDefaultsAndSave(t *testing.T) {
 	if address != "play.example.com" || port != "25566" {
 		t.Fatalf("saved = %q, %q", address, port)
 	}
+
+	preferences.Save(domain.Target{Host: "srv.example.com", Port: 25565, UseSRV: true})
+	address, port = preferences.Load()
+	if address != "srv.example.com" || port != "" {
+		t.Fatalf("SRV preferences = %q, %q", address, port)
+	}
 }
 
 func TestNilPreferencesAreSafe(t *testing.T) {
 	t.Parallel()
 	preferences := NewPreferences(nil)
 	address, port := preferences.Load()
-	if address != "" || port != "25565" {
+	if address != "" || port != "" {
 		t.Fatalf("defaults = %q, %q", address, port)
 	}
 	preferences.Save(domain.Target{Host: "ignored", Port: 25565})
