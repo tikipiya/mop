@@ -11,12 +11,6 @@ Minecraft Java Editionサーバーの状態を確認する、Windows向けのシ
 - 接続結果をクリップボードへコピー
 - 接続先とタイムアウト設定を保存
 
-コピー結果の最終行には次のクレジットが追加されます。
-
-```text
-Developed by: @tikipiya (tikisan)
-```
-
 ## 開発
 
 Go 1.24以降が必要です。

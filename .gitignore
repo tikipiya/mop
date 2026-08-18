@@ -4,6 +4,7 @@
 /dist/
 /bin/
 /build/out/
+/PLAN/
 
 # Go build and test artifacts
 *.exe
