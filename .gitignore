@@ -1,0 +1,75 @@
+# Build output
+/output/
+/tmp/
+/dist/
+/bin/
+/build/out/
+
+# Go build and test artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+*.pprof
+*.coverprofile
+coverage.txt
+coverage.xml
+/vendor/
+go.work
+go.work.sum
+
+# Generated Windows resources
+cmd/**/resource_windows*.syso
+build/windows/app.generated.manifest
+
+# Fyne tooling and local state
+.fyne-cross/
+fyne-cross/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.local
+*.secret
+*.pem
+*.key
+
+# IDEs and editors
+.idea/
+.vscode/
+*.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Operating system files
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Windows crash and installer artifacts
+*.stackdump
+*.msi
+*.msix
+*.appx
+*.appxbundle

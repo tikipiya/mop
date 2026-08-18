@@ -1,0 +1,9 @@
+[Details]
+Icon = "../../assets/Icon.png"
+Name = "Minecraft Server Checker"
+ID = "com.tikipiya.mcserverchecker"
+Version = "0.1.0"
+Build = 2
+
+[Migrations]
+fyneDo = true
