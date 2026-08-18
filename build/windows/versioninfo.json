@@ -3,13 +3,13 @@
     "FileVersion": {
       "Major": 0,
       "Minor": 1,
-      "Patch": 0,
+      "Patch": 1,
       "Build": 1
     },
     "ProductVersion": {
       "Major": 0,
       "Minor": 1,
-      "Patch": 0,
+      "Patch": 1,
       "Build": 1
     },
     "FileFlagsMask": "3f",
@@ -21,12 +21,12 @@
   "StringFileInfo": {
     "CompanyName": "tikipiya (tikisan)",
     "FileDescription": "Minecraft Server Checker",
-    "FileVersion": "0.1.0",
+    "FileVersion": "0.1.1",
     "InternalName": "mc-server-checker",
     "LegalCopyright": "Developed by @tikipiya (tikisan)",
-    "OriginalFilename": "mc-server-checker_v0.1.0_windows_amd64.exe",
+    "OriginalFilename": "mc-server-checker_v0.1.1_windows_amd64.exe",
     "ProductName": "Minecraft Server Checker",
-    "ProductVersion": "0.1.0"
+    "ProductVersion": "0.1.1"
   },
   "VarFileInfo": {
     "Translation": {

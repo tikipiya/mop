@@ -1,5 +1,5 @@
 param(
-    [string]$Version = "0.1.0",
+    [string]$Version = "0.1.1",
     [string]$Commit = "dev"
 )
 
@@ -37,7 +37,9 @@ try {
     go vet ./...
     if ($LASTEXITCODE -ne 0) { throw "go vet failed" }
 
-    (Get-Content -Raw -LiteralPath $manifestSource).Replace('version="0.1.0.0"', "version=`"$Version.1`"") | Set-Content -Encoding UTF8 -LiteralPath $manifestGenerated
+    $manifest = Get-Content -Raw -LiteralPath $manifestSource
+    $assemblyVersion = [regex]'version="[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"'
+    $assemblyVersion.Replace($manifest, "version=`"$Version.1`"", 1) | Set-Content -Encoding UTF8 -LiteralPath $manifestGenerated
     try {
         & $goversioninfo -64 -o $resourcePath -icon $icon -manifest $manifestGenerated -file-version $Version -product-version $Version -original-name $outputName -ver-major $major -ver-minor $minor -ver-patch $patch -ver-build 1 -product-ver-major $major -product-ver-minor $minor -product-ver-patch $patch -product-ver-build 1 $versionInfo
         if ($LASTEXITCODE -ne 0) { throw "goversioninfo failed" }

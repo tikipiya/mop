@@ -26,7 +26,7 @@ go run ./cmd/mc-server-checker
 
 ```powershell
 go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0
-.\Makefile.ps1 -Version "0.1.0" -Commit "dev"
+.\Makefile.ps1 -Version "0.1.1" -Commit "dev"
 ```
 
 生成物は `output\windows` に出力されます。
