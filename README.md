@@ -4,6 +4,16 @@ MOPは **Minecraft Observation Program** の略です。
 
 Minecraft Java Editionサーバーの状態を確認する、Windows向けのシンプルなGUIアプリケーションです。
 
+## インストール
+
+現在は[GitHub Releases](https://github.com/tikipiya/mop/releases/latest)からWindows EXEをダウンロードできます。
+
+winget Community Repositoryへの登録完了後は、次のコマンドでインストールできます。
+
+```powershell
+winget install --id tikipiya.MOP --exact
+```
+
 ## 機能
 
 - サーバーのオンライン状態、Ping、バージョン、プレイヤー数を表示
@@ -26,7 +36,11 @@ go run ./cmd/mc-server-checker
 
 ```powershell
 go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@v1.4.0
-.\Makefile.ps1 -Version "0.1.1" -Commit "dev"
+.\Makefile.ps1 -Version "0.1.2" -Commit "dev"
 ```
 
 生成物は `output\windows` に出力されます。
+
+## ライセンス
+
+[MIT License](LICENSE)
