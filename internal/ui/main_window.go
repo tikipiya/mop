@@ -29,21 +29,23 @@ type MainWindow struct {
 	dispatch     func(func())
 	afterOutcome func()
 
-	addressEntry *widget.Entry
-	portEntry    *widget.Entry
-	checkButton  *widget.Button
-	copyButton   *widget.Button
-	activity     *widget.Activity
-	statusLabel  *widget.Label
-	checkedLabel *widget.Label
-	pingLabel    *widget.Label
-	versionLabel *widget.Label
-	playersLabel *widget.Label
-	motdLabel    *widget.Label
-	modTitle     *widget.Label
-	modLabel     *widget.Label
-	modRow       *fyne.Container
-	messageLabel *widget.Label
+	addressEntry  *widget.Entry
+	portEntry     *widget.Entry
+	checkButton   *widget.Button
+	copyButton    *widget.Button
+	activity      *widget.Activity
+	statusLabel   *widget.Label
+	checkedLabel  *widget.Label
+	resolvedLabel *widget.Label
+	resolvedRow   *fyne.Container
+	pingLabel     *widget.Label
+	versionLabel  *widget.Label
+	playersLabel  *widget.Label
+	motdLabel     *widget.Label
+	modTitle      *widget.Label
+	modLabel      *widget.Label
+	modRow        *fyne.Container
+	messageLabel  *widget.Label
 
 	currentRequestID uint64
 	checking         bool
@@ -95,6 +97,7 @@ func (m *MainWindow) buildContent(build platform.BuildInfo) {
 
 	m.statusLabel = widget.NewLabelWithStyle(m.view.StatusText, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	m.checkedLabel = widget.NewLabel(m.view.CheckedAt)
+	m.resolvedLabel = widget.NewLabel("")
 	m.pingLabel = widget.NewLabel(m.view.Ping)
 	m.versionLabel = widget.NewLabel(m.view.Version)
 	m.playersLabel = widget.NewLabel(m.view.Players)
@@ -119,7 +122,10 @@ func (m *MainWindow) buildContent(build platform.BuildInfo) {
 	}
 	m.modTitle = widget.NewLabel("")
 	m.modRow = detailRow(m.modTitle, m.modLabel)
+	m.resolvedRow = detailRow(widget.NewLabel("Resolved"), m.resolvedLabel)
+	m.resolvedRow.Hide()
 	resultGrid := container.NewVBox(
+		m.resolvedRow,
 		detailRow(widget.NewLabel("Ping"), m.pingLabel),
 		detailRow(widget.NewLabel("Version"), m.versionLabel),
 		detailRow(widget.NewLabel("Players"), m.playersLabel),
@@ -260,6 +266,13 @@ func (m *MainWindow) applyView(view ResultView) {
 	}
 	m.statusLabel.Refresh()
 	m.checkedLabel.SetText(view.CheckedAt)
+	if view.ShowResolved {
+		m.resolvedLabel.SetText(view.Resolved)
+		m.resolvedRow.Show()
+	} else {
+		m.resolvedLabel.SetText("")
+		m.resolvedRow.Hide()
+	}
 	m.pingLabel.SetText(view.Ping)
 	m.versionLabel.SetText(view.Version)
 	m.playersLabel.SetText(view.Players)

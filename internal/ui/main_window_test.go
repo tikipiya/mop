@@ -97,6 +97,22 @@ func TestMainWindowIgnoresCancelledStaleResult(t *testing.T) {
 	})
 }
 
+func TestMainWindowShowsResolvedTargetOnlyWhenPresent(t *testing.T) {
+	application := test.NewApp()
+	window := NewMainWindow(application, nil, storage.NewPreferences(application.Preferences()), platform.BuildInfo{})
+	defer window.rootCancel()
+
+	window.applyView(ResultView{Status: domain.StatusOnline, Resolved: "backend.example.net:25570", ShowResolved: true})
+	if !window.resolvedRow.Visible() || window.resolvedLabel.Text != "backend.example.net:25570" {
+		t.Fatalf("resolved row: visible=%v text=%q", window.resolvedRow.Visible(), window.resolvedLabel.Text)
+	}
+
+	window.applyView(InitialResultView())
+	if window.resolvedRow.Visible() || window.resolvedLabel.Text != "" {
+		t.Fatalf("resolved row remained visible: visible=%v text=%q", window.resolvedRow.Visible(), window.resolvedLabel.Text)
+	}
+}
+
 type uiCheckerFunc func(context.Context, domain.Target) (domain.Result, error)
 
 func (f uiCheckerFunc) Check(ctx context.Context, target domain.Target) (domain.Result, error) {

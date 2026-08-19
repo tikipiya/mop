@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 	"time"
 
@@ -47,11 +46,11 @@ func (c *Client) Check(ctx context.Context, target domain.Target) (domain.Result
 	if dialer == nil {
 		dialer = &net.Dialer{Timeout: 3 * time.Second}
 	}
-	dialAddress, handshakePort, err := c.resolveEndpoint(ctx, target)
+	endpoint, resolvedBySRV, err := c.resolveEndpoint(ctx, target)
 	if err != nil {
 		return domain.Result{}, err
 	}
-	conn, err := dialer.DialContext(ctx, "tcp", dialAddress)
+	conn, err := dialer.DialContext(ctx, "tcp", endpoint.Address())
 	if err != nil {
 		return domain.Result{}, err
 	}
@@ -66,7 +65,7 @@ func (c *Client) Check(ctx context.Context, target domain.Target) (domain.Result
 
 	codec := c.Codec
 	handshakeTarget := target
-	handshakeTarget.Port = handshakePort
+	handshakeTarget.Port = endpoint.Port
 	if err := c.writeHandshake(codec, conn, handshakeTarget); err != nil {
 		return domain.Result{}, fmt.Errorf("write handshake: %w", err)
 	}
@@ -108,6 +107,9 @@ func (c *Client) Check(ctx context.Context, target domain.Target) (domain.Result
 		ModCount:        modInfo.Count,
 		ModInfoWarning:  modInfo.Warning,
 	}
+	if resolvedBySRV {
+		result.ResolvedTarget = &endpoint
+	}
 
 	latency, err := c.ping(codec, conn, now)
 	if err != nil {
@@ -118,9 +120,9 @@ func (c *Client) Check(ctx context.Context, target domain.Target) (domain.Result
 	return result, nil
 }
 
-func (c *Client) resolveEndpoint(ctx context.Context, target domain.Target) (string, uint16, error) {
+func (c *Client) resolveEndpoint(ctx context.Context, target domain.Target) (domain.Target, bool, error) {
 	if !target.UseSRV {
-		return target.Address(), target.Port, nil
+		return domain.Target{Host: target.Host, Port: target.Port}, false, nil
 	}
 
 	resolver := c.Resolver
@@ -132,14 +134,13 @@ func (c *Client) resolveEndpoint(ctx context.Context, target domain.Target) (str
 		record := records[0]
 		host := strings.TrimSuffix(record.Target, ".")
 		if host != "" && record.Port != 0 {
-			address := net.JoinHostPort(host, strconv.FormatUint(uint64(record.Port), 10))
-			return address, record.Port, nil
+			return domain.Target{Host: host, Port: record.Port}, true, nil
 		}
 	}
 	if ctxErr := ctx.Err(); ctxErr != nil {
-		return "", 0, ctxErr
+		return domain.Target{}, false, ctxErr
 	}
-	return target.Address(), target.Port, nil
+	return domain.Target{Host: target.Host, Port: target.Port}, false, nil
 }
 
 func (c *Client) writeHandshake(codec Codec, conn net.Conn, target domain.Target) error {

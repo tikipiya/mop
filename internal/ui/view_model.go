@@ -12,19 +12,21 @@ import (
 const unavailable = "—"
 
 type ResultView struct {
-	Status      domain.Status
-	StatusText  string
-	CheckedAt   string
-	Ping        string
-	Version     string
-	Players     string
-	MOTD        string
-	Mod         string
-	Message     string
-	CopyText    string
-	ShowMod     bool
-	ShowMessage bool
-	HasResult   bool
+	Status       domain.Status
+	StatusText   string
+	CheckedAt    string
+	Resolved     string
+	Ping         string
+	Version      string
+	Players      string
+	MOTD         string
+	Mod          string
+	Message      string
+	CopyText     string
+	ShowMod      bool
+	ShowResolved bool
+	ShowMessage  bool
+	HasResult    bool
 }
 
 func InitialResultView() ResultView {
@@ -64,6 +66,7 @@ func CompletedResultView(result domain.Result, appError *domain.AppError) Result
 	view.Status = result.Status
 	view.HasResult = result.Target.Host != ""
 	view.CheckedAt = formatCheckedAt(result.CheckedAt)
+	view.Resolved, view.ShowResolved = formatResolvedTarget(result.ResolvedTarget)
 	view.Ping = formatLatency(result.Latency, result.Warning)
 	view.Version = valueOrUnknown(result.VersionName)
 	view.Players = formatPlayers(result.PlayersOnline, result.PlayersMax)
@@ -142,19 +145,36 @@ func formatMod(result domain.Result) (string, bool) {
 	return fmt.Sprintf("検出（%s）", loader), true
 }
 
+func formatResolvedTarget(target *domain.Target) (string, bool) {
+	if target == nil || target.Host == "" || target.Port == 0 {
+		return "", false
+	}
+	return target.Address(), true
+}
+
+func formatInputTarget(target domain.Target) string {
+	if target.UseSRV {
+		return target.Host
+	}
+	return target.Address()
+}
+
 func formatCopyText(result domain.Result, view ResultView) string {
 	if result.Target.Host == "" {
 		return ""
 	}
-	lines := []string{
-		"Target: " + result.Target.Address(),
-		"Status: " + string(result.Status),
-		"Checked: " + view.CheckedAt,
-		"Ping: " + view.Ping,
-		"Version: " + view.Version,
-		"Players: " + view.Players,
-		"MOTD: " + view.MOTD,
+	lines := []string{"Target: " + formatInputTarget(result.Target)}
+	if view.ShowResolved {
+		lines = append(lines, "Resolved: "+view.Resolved)
 	}
+	lines = append(lines,
+		"Status: "+string(result.Status),
+		"Checked: "+view.CheckedAt,
+		"Ping: "+view.Ping,
+		"Version: "+view.Version,
+		"Players: "+view.Players,
+		"MOTD: "+view.MOTD,
+	)
 	if view.ShowMod {
 		lines = append(lines, "MOD: "+view.Mod)
 	}

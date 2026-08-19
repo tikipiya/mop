@@ -16,6 +16,7 @@ const (
 // fields distinguish a missing value from a real zero reported by the server.
 type Result struct {
 	Target          Target
+	ResolvedTarget  *Target
 	Status          Status
 	Latency         *time.Duration
 	VersionName     string

@@ -20,14 +20,14 @@ func TestClientResolvesMinecraftSRVWhenPortIsOmitted(t *testing.T) {
 	client := NewClient(769)
 	client.Resolver = resolver
 
-	address, port, err := client.resolveEndpoint(context.Background(), domain.Target{
+	endpoint, resolved, err := client.resolveEndpoint(context.Background(), domain.Target{
 		Host: "play.example.com", Port: domain.DefaultPort, UseSRV: true,
 	})
 	if err != nil {
 		t.Fatalf("resolveEndpoint: %v", err)
 	}
-	if address != "backend.example.net:25570" || port != 25570 {
-		t.Fatalf("endpoint = %q, %d", address, port)
+	if endpoint != (domain.Target{Host: "backend.example.net", Port: 25570}) || !resolved {
+		t.Fatalf("endpoint = %+v, resolved = %v", endpoint, resolved)
 	}
 	if resolver.service != "minecraft" || resolver.proto != "tcp" || resolver.name != "play.example.com" {
 		t.Fatalf("lookup = %q, %q, %q", resolver.service, resolver.proto, resolver.name)
@@ -55,6 +55,10 @@ func TestClientCheckConnectsThroughSRVEndpoint(t *testing.T) {
 	if result.Status != domain.StatusOnline {
 		t.Fatalf("result = %+v", result)
 	}
+	wantResolved := domain.Target{Host: "127.0.0.1", Port: port}
+	if result.ResolvedTarget == nil || *result.ResolvedTarget != wantResolved {
+		t.Fatalf("resolved target = %#v, want %+v", result.ResolvedTarget, wantResolved)
+	}
 }
 
 func TestClientFallsBackToDefaultPortWithoutSRV(t *testing.T) {
@@ -63,14 +67,14 @@ func TestClientFallsBackToDefaultPortWithoutSRV(t *testing.T) {
 	client := NewClient(769)
 	client.Resolver = resolver
 
-	address, port, err := client.resolveEndpoint(context.Background(), domain.Target{
+	endpoint, resolved, err := client.resolveEndpoint(context.Background(), domain.Target{
 		Host: "play.example.com", Port: domain.DefaultPort, UseSRV: true,
 	})
 	if err != nil {
 		t.Fatalf("resolveEndpoint: %v", err)
 	}
-	if address != "play.example.com:25565" || port != domain.DefaultPort {
-		t.Fatalf("endpoint = %q, %d", address, port)
+	if endpoint != (domain.Target{Host: "play.example.com", Port: domain.DefaultPort}) || resolved {
+		t.Fatalf("endpoint = %+v, resolved = %v", endpoint, resolved)
 	}
 }
 
@@ -80,14 +84,14 @@ func TestClientSkipsSRVForExplicitPort(t *testing.T) {
 	client := NewClient(769)
 	client.Resolver = resolver
 
-	address, port, err := client.resolveEndpoint(context.Background(), domain.Target{
+	endpoint, resolved, err := client.resolveEndpoint(context.Background(), domain.Target{
 		Host: "play.example.com", Port: 25566,
 	})
 	if err != nil {
 		t.Fatalf("resolveEndpoint: %v", err)
 	}
-	if address != "play.example.com:25566" || port != 25566 || resolver.calls != 0 {
-		t.Fatalf("endpoint = %q, %d; lookup calls = %d", address, port, resolver.calls)
+	if endpoint != (domain.Target{Host: "play.example.com", Port: 25566}) || resolved || resolver.calls != 0 {
+		t.Fatalf("endpoint = %+v, resolved = %v; lookup calls = %d", endpoint, resolved, resolver.calls)
 	}
 }
 
@@ -106,6 +110,9 @@ func TestClientCheckAgainstFakeServer(t *testing.T) {
 	}
 	if result.Status != domain.StatusOnline || result.Latency == nil || result.Warning != "" {
 		t.Fatalf("result status fields = %+v", result)
+	}
+	if result.ResolvedTarget != nil {
+		t.Fatalf("direct connection unexpectedly has resolved target: %+v", result.ResolvedTarget)
 	}
 	if result.VersionName != "Fake 1.21" || result.PlayersOnline == nil || *result.PlayersOnline != 2 || result.PlayersMax == nil || *result.PlayersMax != 10 || result.MOTD != "Fake Server" {
 		t.Fatalf("result values = %+v", result)

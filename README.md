@@ -8,7 +8,7 @@ Minecraft Java Editionサーバーの状態を確認する、Windows向けのシ
 
 - サーバーのオンライン状態、Ping、バージョン、プレイヤー数を表示
 - MOTDとMOD情報を取得
-- ポート省略時のMinecraft DNS SRVレコードを自動解決
+- ポート省略時のMinecraft DNS SRVレコードを自動解決し、実接続先を表示
 - 接続結果をクリップボードへコピー
 - 接続先とタイムアウト設定を保存
 

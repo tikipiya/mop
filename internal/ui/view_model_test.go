@@ -38,6 +38,27 @@ func TestCompletedResultViewOnline(t *testing.T) {
 	if !strings.HasSuffix(view.CopyText, "Developed by: @tikipiya (tikisan)") {
 		t.Fatalf("copy credit is not the final line: %q", view.CopyText)
 	}
+	if strings.Contains(view.CopyText, "Resolved:") || view.ShowResolved {
+		t.Fatalf("direct connection unexpectedly shows resolved target: %+v", view)
+	}
+}
+
+func TestCompletedResultViewShowsSRVEndpoint(t *testing.T) {
+	t.Parallel()
+	resolved := domain.Target{Host: "backend.example.net", Port: 25570}
+	view := CompletedResultView(domain.Result{
+		Target:         domain.Target{Host: "play.example.com", Port: 25565, UseSRV: true},
+		ResolvedTarget: &resolved,
+		Status:         domain.StatusOnline,
+	}, nil)
+
+	if !view.ShowResolved || view.Resolved != "backend.example.net:25570" {
+		t.Fatalf("view = %+v", view)
+	}
+	want := "Target: play.example.com\nResolved: backend.example.net:25570\nStatus: ONLINE"
+	if !strings.Contains(view.CopyText, want) {
+		t.Fatalf("copy text %q does not contain %q", view.CopyText, want)
+	}
 }
 
 func TestCompletedResultViewErrorAndMissingValues(t *testing.T) {
